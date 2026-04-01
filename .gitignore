@@ -1,0 +1,6 @@
+.env
+.env.example
+project_memory/
+__pycache__/
+*.pyc
+.venv/
