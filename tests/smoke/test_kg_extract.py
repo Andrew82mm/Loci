@@ -1,5 +1,5 @@
 import pytest
-from knowledge_graph import KnowledgeGraph
+from llm_memory.graph.extractor import KnowledgeGraph
 
 
 def test_kg_extract_creates_entity_file(tmp_memory_dir, mock_llm):

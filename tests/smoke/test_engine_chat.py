@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from storage import StorageManager
-import core_engine
+from llm_memory.storage.filesystem import StorageManager
+import llm_memory.engine as engine_mod
 
 
 def test_chat_buffer_grows(tmp_path):
@@ -11,12 +11,12 @@ def test_chat_buffer_grows(tmp_path):
     rag_mock.search.return_value = []
 
     with (
-        patch("core_engine.StorageManager", return_value=storage),
-        patch("core_engine.RAGEngine", return_value=rag_mock),
-        patch("core_engine.KnowledgeGraph", return_value=MagicMock()),
-        patch.object(core_engine.llm_client, "generate", return_value="Mock answer. References: none"),
+        patch("llm_memory.engine.StorageManager", return_value=storage),
+        patch("llm_memory.engine.RAGEngine", return_value=rag_mock),
+        patch("llm_memory.engine.KnowledgeGraph", return_value=MagicMock()),
+        patch.object(engine_mod.llm_client, "generate", return_value="Mock answer. References: none"),
     ):
-        engine = core_engine.MemoryEngine()
+        engine = engine_mod.MemoryEngine()
         engine.chat("Hello")
         assert len(engine.buffer) == 2
         engine.chat("How are you?")
@@ -30,15 +30,15 @@ def test_summarization_triggers_at_threshold(tmp_path, monkeypatch):
     rag_mock.search.return_value = []
     summarize_mock = MagicMock()
 
-    monkeypatch.setattr(core_engine, "SUMMARIZE_EVERY_N_MSG", 2)
+    monkeypatch.setattr(engine_mod, "SUMMARIZE_EVERY_N_MSG", 2)
 
     with (
-        patch("core_engine.StorageManager", return_value=storage),
-        patch("core_engine.RAGEngine", return_value=rag_mock),
-        patch("core_engine.KnowledgeGraph", return_value=MagicMock()),
-        patch.object(core_engine.llm_client, "generate", return_value="Mock answer. References: none"),
+        patch("llm_memory.engine.StorageManager", return_value=storage),
+        patch("llm_memory.engine.RAGEngine", return_value=rag_mock),
+        patch("llm_memory.engine.KnowledgeGraph", return_value=MagicMock()),
+        patch.object(engine_mod.llm_client, "generate", return_value="Mock answer. References: none"),
     ):
-        engine = core_engine.MemoryEngine()
+        engine = engine_mod.MemoryEngine()
         engine._run_summarization_cycle = summarize_mock
 
         engine.chat("msg 1")  # buffer = 2, threshold = 4, no trigger

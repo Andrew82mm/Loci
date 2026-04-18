@@ -1,11 +1,10 @@
-# llm_client.py
 import requests
 import json
-from config import OPENROUTER_BASE_URL, get_openrouter_key
-from colors import log_llm
+from llm_memory.config import OPENROUTER_BASE_URL, get_openrouter_key
+from llm_memory.colors import log_llm
 
-# Модели, для которых OpenRouter требует жёсткий :free-суффикс
 _FREE_FALLBACK = "meta-llama/llama-3-8b-instruct:free"
+
 
 class LLMClient:
     def __init__(self) -> None:
@@ -19,7 +18,6 @@ class LLMClient:
         temperature: float = 0.7,
         fallback_model: str = _FREE_FALLBACK,
     ) -> str:
-        """Генерирует ответ. При ошибке пробует fallback_model."""
         result = self._call(model, system_prompt, user_prompt, temperature)
         if result.startswith("Error:") and model != fallback_model:
             log_llm(f"Модель {model} недоступна, пробую fallback: {fallback_model}")
@@ -49,12 +47,12 @@ class LLMClient:
             )
             resp.raise_for_status()
             data = resp.json()
-            # Иногда OpenRouter возвращает ошибку внутри 200-ответа
             if "error" in data:
                 raise ValueError(data["error"].get("message", str(data["error"])))
             return data["choices"][0]["message"]["content"]
         except Exception as e:
             log_llm(f"Model: {model} | {e}")
             return f"Error: {e}"
+
 
 llm_client = LLMClient()

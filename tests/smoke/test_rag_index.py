@@ -1,8 +1,8 @@
 import json
 import os
 import pytest
-from storage import StorageManager
-from rag_engine import RAGEngine
+from llm_memory.storage.filesystem import StorageManager
+from llm_memory.rag.retriever import RAGEngine
 
 
 def _reset_mtime_index(storage: StorageManager) -> None:

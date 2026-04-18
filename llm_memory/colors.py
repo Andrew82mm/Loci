@@ -1,5 +1,5 @@
 # colors.py — ANSI-цвета для терминала
-# Использование: from colors import c, log
+# Использование: from llm_memory.colors import c, log
 import sys
 
 RESET  = "\033[0m"
@@ -37,43 +37,33 @@ def c(text, *codes):
 # ─── Готовые шаблоны логов ──────────────────────────────────────────────────
 
 def log_system(msg):
-    """[System] — голубой"""
     print(c(f"[System] {msg}", BRIGHT_CYAN))
 
 def log_ok(msg):
-    """Успех — зелёный"""
     print(c(f"  ✓ {msg}", BRIGHT_GREEN))
 
 def log_warn(msg):
-    """Предупреждение — жёлтый"""
     print(c(f"  ⚠ {msg}", BRIGHT_YELLOW))
 
 def log_error(msg):
-    """Ошибка — красный"""
     print(c(f"  ✗ {msg}", BRIGHT_RED), file=sys.stderr)
 
 def log_knowledge(msg):
-    """Граф знаний — маджента"""
     print(c(f"[Knowledge] {msg}", MAGENTA))
 
 def log_rag(msg):
-    """RAG — синий"""
     print(c(f"[RAG] {msg}", BLUE))
 
 def log_llm(msg):
-    """LLM-ошибка — ярко-красный"""
     print(c(f"[LLM Error] {msg}", BRIGHT_RED), file=sys.stderr)
 
 def log_snapshot(msg):
-    """Снэпшот — жёлтый"""
     print(c(f"[Snapshot] {msg}", YELLOW))
 
 def separator(char="─", width=50):
-    """Разделитель"""
     print(c(char * width, DIM))
 
 def banner(title):
-    """Шапка при запуске"""
     width = 52
     line  = "═" * width
     print(c(line, BRIGHT_CYAN))

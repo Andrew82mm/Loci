@@ -1,11 +1,11 @@
-# storage.py
 import os
 import json
 import shutil
 from datetime import datetime
 import yaml
-from config import MEMORY_DIR
-from colors import log_system, log_snapshot, log_warn
+from llm_memory.config import MEMORY_DIR
+from llm_memory.colors import log_system, log_snapshot, log_warn
+
 
 class StorageManager:
     def __init__(self, base_path=MEMORY_DIR):
@@ -14,11 +14,8 @@ class StorageManager:
             "system":       os.path.join(base_path, "_system"),
             "snapshots":    os.path.join(base_path, "_system", "snapshots"),
             "archive":      os.path.join(base_path, "archive"),
-            # Глобальные знания (о пользователе, общие факты)
             "knowledge_global":  os.path.join(base_path, "knowledge", "_global"),
-            # Знания текущего проекта (namespace)
             "knowledge_project": os.path.join(base_path, "knowledge", "default"),
-            # Backward-compat алиас (используется в RAG/KG)
             "knowledge":    os.path.join(base_path, "knowledge", "default"),
             "context_file": os.path.join(base_path, "context.md"),
             "pinned_file":  os.path.join(base_path, "pinned.md"),
@@ -39,7 +36,6 @@ class StorageManager:
     # ── Файловые операции ──────────────────────────────────────────────────
 
     def write_file(self, filepath, content, metadata=None):
-        """Записывает .md файл с опциональным YAML frontmatter."""
         full_content = ""
         if metadata:
             full_content = "---\n" + yaml.dump(metadata, allow_unicode=True) + "---\n"
@@ -92,7 +88,6 @@ class StorageManager:
         return {}
 
     def is_file_changed(self, filepath) -> bool:
-        """True если файл новый или изменился с последней индексации."""
         index = self._load_index()
         abs_path = os.path.abspath(filepath)
         if abs_path not in index:
@@ -105,26 +100,22 @@ class StorageManager:
     # ── Снэпшоты и откат ──────────────────────────────────────────────────
 
     def create_snapshot(self, label: str = "") -> str:
-        """Создаёт снэпшот текущего состояния памяти."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         name = f"snapshot_{timestamp}" + (f"_{label}" if label else "")
         snapshot_path = os.path.join(self.paths["snapshots"], name)
         os.makedirs(snapshot_path, exist_ok=True)
 
-        # Копируем ключевые файлы
         for key in ["context_file", "pinned_file", "task_file"]:
             src = self.paths[key]
             if os.path.exists(src):
                 shutil.copy2(src, snapshot_path)
 
-        # Копируем knowledge целиком
         knowledge_root = os.path.join(self.base_path, "knowledge")
         if os.path.exists(knowledge_root):
             shutil.copytree(knowledge_root,
                             os.path.join(snapshot_path, "knowledge"),
                             dirs_exist_ok=True)
 
-        # Сохраняем метаданные снэпшота
         meta = {"timestamp": timestamp, "label": label}
         with open(os.path.join(snapshot_path, "meta.json"), "w") as f:
             json.dump(meta, f)
@@ -133,7 +124,6 @@ class StorageManager:
         return snapshot_path
 
     def list_snapshots(self) -> list[dict]:
-        """Возвращает список снэпшотов, отсортированных от новых к старым."""
         snaps = []
         snap_dir = self.paths["snapshots"]
         if not os.path.exists(snap_dir):
@@ -152,28 +142,20 @@ class StorageManager:
         return snaps
 
     def restore_snapshot(self, snapshot_name: str) -> bool:
-        """
-        Откатывает память к состоянию снэпшота.
-        Возвращает True при успехе.
-        """
         snap_path = os.path.join(self.paths["snapshots"], snapshot_name)
         if not os.path.exists(snap_path):
             log_warn(f"Снэпшот не найден: {snapshot_name}")
             return False
 
-        # Перед откатом — создаём снэпшот текущего состояния (safety net)
         self.create_snapshot(label="before_restore")
 
-        # Восстанавливаем файлы
         for fname in ["context.md", "pinned.md", "task.md"]:
             src = os.path.join(snap_path, fname)
-            # task.md хранится в _system/
             dst = self.paths["task_file"] if fname == "task.md" else \
                   os.path.join(self.base_path, fname)
             if os.path.exists(src):
                 shutil.copy2(src, dst)
 
-        # Восстанавливаем knowledge
         knowledge_snap = os.path.join(snap_path, "knowledge")
         knowledge_dst  = os.path.join(self.base_path, "knowledge")
         if os.path.exists(knowledge_snap):
@@ -200,7 +182,6 @@ class StorageManager:
     # ── Namespace-хелперы ─────────────────────────────────────────────────
 
     def set_project(self, project_name: str):
-        """Переключает активный namespace проекта."""
         self.paths["knowledge_project"] = os.path.join(
             self.base_path, "knowledge", project_name
         )
