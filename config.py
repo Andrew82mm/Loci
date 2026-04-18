@@ -11,11 +11,16 @@ except ImportError:
     pass  # python-dotenv не установлен — используем системные переменные
 
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
-if not OPENROUTER_API_KEY:
-    raise EnvironmentError(
-        "[Config] OPENROUTER_API_KEY не задан. "
-        "Создайте файл .env с OPENROUTER_API_KEY=<ваш ключ> или задайте переменную окружения."
-    )
+
+
+def get_openrouter_key() -> str:
+    key = os.environ.get("OPENROUTER_API_KEY", OPENROUTER_API_KEY)
+    if not key:
+        raise EnvironmentError(
+            "[Config] OPENROUTER_API_KEY не задан. "
+            "Создайте файл .env с OPENROUTER_API_KEY=<ваш ключ> или задайте переменную окружения."
+        )
+    return key
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 

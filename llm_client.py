@@ -1,19 +1,15 @@
 # llm_client.py
 import requests
 import json
-from config import OPENROUTER_API_KEY, OPENROUTER_BASE_URL
+from config import OPENROUTER_BASE_URL, get_openrouter_key
 from colors import log_llm
 
 # Модели, для которых OpenRouter требует жёсткий :free-суффикс
 _FREE_FALLBACK = "meta-llama/llama-3-8b-instruct:free"
 
 class LLMClient:
-    def __init__(self):
-        self.headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "http://localhost",
-        }
+    def __init__(self) -> None:
+        pass
 
     def generate(
         self,
@@ -31,6 +27,11 @@ class LLMClient:
         return result
 
     def _call(self, model: str, system_prompt: str, user_prompt: str, temperature: float) -> str:
+        headers = {
+            "Authorization": f"Bearer {get_openrouter_key()}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "http://localhost",
+        }
         payload = {
             "model": model,
             "messages": [
@@ -42,7 +43,7 @@ class LLMClient:
         try:
             resp = requests.post(
                 f"{OPENROUTER_BASE_URL}/chat/completions",
-                headers=self.headers,
+                headers=headers,
                 data=json.dumps(payload),
                 timeout=60,
             )

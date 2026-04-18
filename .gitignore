@@ -4,3 +4,10 @@ project_memory/
 __pycache__/
 *.pyc
 .venv/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+
