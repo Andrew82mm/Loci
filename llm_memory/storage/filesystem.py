@@ -99,7 +99,7 @@ class StorageManager:
 
     # ── Снэпшоты и откат ──────────────────────────────────────────────────
 
-    def create_snapshot(self, label: str = "") -> str:
+    def create_snapshot(self, label: str = "", parent_snapshot: str | None = None) -> str:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         name = f"snapshot_{timestamp}" + (f"_{label}" if label else "")
         snapshot_path = os.path.join(self.paths["snapshots"], name)
@@ -116,12 +116,29 @@ class StorageManager:
                             os.path.join(snapshot_path, "knowledge"),
                             dirs_exist_ok=True)
 
-        meta = {"timestamp": timestamp, "label": label}
+        # Include conversation buffer
+        buf_src = self.paths["history_file"]
+        if os.path.exists(buf_src):
+            shutil.copy2(buf_src, snapshot_path)
+
+        # Include Chroma DB
+        chroma_src = os.path.join(self.paths["system"], "chroma_db")
+        includes_chroma = False
+        if os.path.exists(chroma_src):
+            shutil.copytree(chroma_src, os.path.join(snapshot_path, "chroma_db"))
+            includes_chroma = True
+
+        meta = {
+            "timestamp": timestamp,
+            "label": label,
+            "includes_chroma": includes_chroma,
+            "parent_snapshot": parent_snapshot,
+        }
         with open(os.path.join(snapshot_path, "meta.json"), "w") as f:
             json.dump(meta, f)
 
         log_snapshot(f"Создан: {name}")
-        return snapshot_path
+        return name  # return name, not path
 
     def list_snapshots(self) -> list[dict]:
         snaps = []
@@ -141,13 +158,14 @@ class StorageManager:
             snaps.append({"name": name, "path": path, **meta})
         return snaps
 
-    def restore_snapshot(self, snapshot_name: str) -> bool:
+    def restore_snapshot(self, snapshot_name: str, silent: bool = False) -> bool:
         snap_path = os.path.join(self.paths["snapshots"], snapshot_name)
         if not os.path.exists(snap_path):
-            log_warn(f"Снэпшот не найден: {snapshot_name}")
+            if not silent:
+                log_warn(f"Снэпшот не найден: {snapshot_name}")
             return False
 
-        self.create_snapshot(label="before_restore")
+        before_name = self.create_snapshot(label="before_restore", parent_snapshot=snapshot_name)
 
         for fname in ["context.md", "pinned.md", "task.md"]:
             src = os.path.join(snap_path, fname)
@@ -163,7 +181,24 @@ class StorageManager:
                 shutil.rmtree(knowledge_dst)
             shutil.copytree(knowledge_snap, knowledge_dst)
 
-        log_snapshot(f"Откат выполнен: {snapshot_name}")
+        # Restore conversation buffer
+        buf_snap = os.path.join(snap_path, "conversation_buffer.json")
+        if os.path.exists(buf_snap):
+            shutil.copy2(buf_snap, self.paths["history_file"])
+
+        # Restore Chroma DB
+        chroma_snap = os.path.join(snap_path, "chroma_db")
+        chroma_dst  = os.path.join(self.paths["system"], "chroma_db")
+        if os.path.exists(chroma_snap):
+            if os.path.exists(chroma_dst):
+                shutil.rmtree(chroma_dst)
+            shutil.copytree(chroma_snap, chroma_dst)
+
+        # Store reference to the "before_restore" snapshot for undo support
+        self._last_before_restore = before_name
+
+        if not silent:
+            log_snapshot(f"Откат выполнен: {snapshot_name}")
         return True
 
     # ── Архив ─────────────────────────────────────────────────────────────

@@ -1,30 +1,31 @@
 import os
-import chromadb
-from chromadb.utils import embedding_functions
+import json
+import math
+from llm_memory.rag.vector import VectorStore
+from llm_memory.rag.chunker import chunk_markdown
 from llm_memory.storage.filesystem import StorageManager
+from llm_memory.models import RetrievedChunk
+from llm_memory.config import MIN_SIMILARITY
 from llm_memory.colors import log_rag, log_warn
 
-CHUNK_SIZE    = 800
-CHUNK_OVERLAP = 100
+
+def _distance_to_score(distance: float) -> float:
+    """Convert squared-L2 distance (all-MiniLM default) to cosine similarity proxy."""
+    # For normalised vectors: cosine_sim = 1 - dist/2
+    return max(0.0, 1.0 - distance / 2.0)
 
 
 class RAGEngine:
-    def __init__(self, storage: StorageManager):
+    def __init__(self, storage: StorageManager, graph_index=None) -> None:
         self.storage = storage
+        self.graph_index = graph_index  # injected to avoid circular imports
         db_path = os.path.join(storage.paths["system"], "chroma_db")
-        self.client = chromadb.PersistentClient(path=db_path)
-        self.embedding_func = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name="all-MiniLM-L6-v2"
-        )
-        self.collection = self.client.get_or_create_collection(
-            name="memory_vault",
-            embedding_function=self.embedding_func,
-        )
+        self.vector = VectorStore(db_path)
         self._sync_index()
 
-    # ── Индексирование ────────────────────────────────────────────────────
+    # ── Indexing ──────────────────────────────────────────────────────────
 
-    def _sync_index(self):
+    def _sync_index(self) -> None:
         dirs_to_scan = [
             self.storage.paths["knowledge"],
             self.storage.paths.get("knowledge_global", ""),
@@ -49,76 +50,72 @@ class RAGEngine:
         if count:
             log_rag(f"Проиндексировано файлов: {count}")
 
-    def index_file(self, filepath: str):
+    def index_file(self, filepath: str) -> None:
         if not os.path.exists(filepath):
             return
-
         with open(filepath, "r", encoding="utf-8") as f:
             content = f.read().strip()
-
         if not content:
             return
 
-        doc_id_base = os.path.abspath(filepath).replace("\\", "/")
-        chunks = self._split_chunks(content)
+        abs_path = os.path.abspath(filepath).replace("\\", "/")
+        self.vector.delete_by_source(abs_path)
 
-        try:
-            existing = self.collection.get(where={"source": doc_id_base})
-            if existing["ids"]:
-                self.collection.delete(ids=existing["ids"])
-        except Exception:
-            pass
-
+        chunks = chunk_markdown(content, source=abs_path)
         if not chunks:
             return
 
-        ids       = [f"{doc_id_base}::chunk{i}" for i in range(len(chunks))]
-        metadatas = [{"source": doc_id_base, "chunk": i} for i in range(len(chunks))]
+        ids = [f"{abs_path}::chunk{i}" for i in range(len(chunks))]
+        documents = [c["content"] for c in chunks]
+        metadatas = [
+            {"source": abs_path, "chunk": i, "heading_path": json.dumps(c["heading_path"])}
+            for i, c in enumerate(chunks)
+        ]
+        self.vector.upsert(ids=ids, documents=documents, metadatas=metadatas)
 
-        self.collection.upsert(documents=chunks, metadatas=metadatas, ids=ids)
-
-    def _split_chunks(self, text: str) -> list[str]:
-        if len(text) <= CHUNK_SIZE:
-            return [text]
-        chunks = []
-        start = 0
-        while start < len(text):
-            end = start + CHUNK_SIZE
-            chunks.append(text[start:end])
-            start += CHUNK_SIZE - CHUNK_OVERLAP
-        return chunks
-
-    # ── Поиск ─────────────────────────────────────────────────────────────
+    # ── Search ────────────────────────────────────────────────────────────
 
     def search(self, query: str, n_results: int = 5) -> list[str]:
         try:
-            results = self.collection.query(query_texts=[query], n_results=n_results)
-        except Exception as e:
-            log_warn(f"RAG search failed: {e}")
+            raw = self.vector.query(query, n_results=n_results)
+        except Exception as exc:
+            log_warn(f"RAG search failed: {exc}")
             return []
 
-        if not results["documents"] or not results["documents"][0]:
+        if not raw["documents"] or not raw["documents"][0]:
             return []
 
+        distances = raw["distances"][0] if raw.get("distances") else []
+        docs = raw["documents"][0]
+        metas = raw["metadatas"][0]
+
+        total = len(docs)
         source_files: set[str] = set()
-        for meta_list in results["metadatas"]:
-            for meta in meta_list:
+        for doc, dist, meta in zip(docs, distances, metas):
+            score = _distance_to_score(dist) if distances else 1.0
+            if score >= MIN_SIMILARITY:
                 source_files.add(meta["source"])
 
-        # Графовый обход — добавляем соседей (циклический импорт будет починен в Phase 1.11)
-        from llm_memory.graph.extractor import KnowledgeGraph
-        kg = KnowledgeGraph(self.storage)
-        expanded_files = set(source_files)
+        filtered = total - len(source_files)
+        if filtered:
+            log_rag(f"Отфильтровано {filtered}/{total} чанков ниже порога схожести")
 
-        for filepath in source_files:
-            neighbors = kg.get_connected_nodes(filepath)
-            for neighbor_name in neighbors:
-                neighbor_path = kg.get_entity_path(neighbor_name)
-                if neighbor_path:
-                    expanded_files.add(neighbor_path)
+        # Graph expansion via injected index
+        if self.graph_index is not None:
+            expanded: set[str] = set(source_files)
+            for filepath in source_files:
+                try:
+                    neighbors = self.graph_index.get_connected_nodes(filepath)
+                    for neighbor_name in neighbors:
+                        neighbor_path = self.graph_index.get_entity_path(neighbor_name)
+                        if neighbor_path:
+                            expanded.add(neighbor_path)
+                except Exception:
+                    pass
+            source_files = expanded
 
-        final_context = []
-        for path in expanded_files:
+        final_context: list[str] = []
+        for path in source_files:
             _, content = self.storage.read_file(path)
             if content:
                 label = os.path.relpath(path, self.storage.base_path)
@@ -129,15 +126,15 @@ class RAGEngine:
 
         return final_context
 
-    def reindex_all(self):
+    def reindex_all(self) -> None:
         log_rag("Полная переиндексация...")
-        self.client.delete_collection("memory_vault")
-        self.collection = self.client.get_or_create_collection(
-            name="memory_vault",
-            embedding_function=self.embedding_func,
-        )
-        import json
+        self.vector.reset()
         with open(self.storage.paths["index_file"], "w") as f:
             json.dump({}, f)
+        self.vector.reload_client()
         self._sync_index()
         log_rag("Переиндексация завершена.")
+
+    def reload_after_restore(self) -> None:
+        """Reload Chroma client after snapshot restore (avoids reindex_all)."""
+        self.vector.reload_client()

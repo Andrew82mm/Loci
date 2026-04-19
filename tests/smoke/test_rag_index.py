@@ -20,7 +20,7 @@ def test_rag_sync_index_counts_chunks(tmp_memory_dir):
 
     _reset_mtime_index(storage)
     rag = RAGEngine(storage)
-    assert rag.collection.count() >= 2
+    assert rag.vector.count() >= 2
 
 
 def test_rag_search_returns_results(tmp_memory_dir):
