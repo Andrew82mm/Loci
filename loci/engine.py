@@ -1,24 +1,23 @@
-import os
 import json
+import os
 import re
 from datetime import datetime
 
+from loci.buffer import ConversationBuffer
+from loci.colors import log_ok, log_warn
 from loci.config import (
-    SUMMARIZE_EVERY_N_MSG,
-    SUMMARIZE_TOKEN_THRESHOLD,
-    SUMMARIZE_MAX_MESSAGES,
     KEEP_RECENT_K,
     MODEL_SMART,
+    SUMMARIZE_MAX_MESSAGES,
+    SUMMARIZE_TOKEN_THRESHOLD,
 )
-from loci.models import Message
-from loci.buffer import ConversationBuffer
-from loci.summarizer import SummarizationPipeline
-from loci.llm.client import llm_client
-from loci.storage.filesystem import StorageManager
-from loci.rag.retriever import RAGEngine
 from loci.graph.extractor import KnowledgeGraph
 from loci.graph.index import GraphIndex
-from loci.colors import log_ok, log_warn
+from loci.llm.client import llm_client
+from loci.models import Message
+from loci.rag.retriever import RAGEngine
+from loci.storage.filesystem import StorageManager
+from loci.summarizer import SummarizationPipeline
 
 
 class MemoryEngine:
@@ -40,7 +39,7 @@ class MemoryEngine:
     def _load_buffer(self) -> None:
         path = self.storage.paths["history_file"]
         if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 try:
                     data = json.load(f)
                     self.buffer = ConversationBuffer.from_dicts(data, keep_recent_k=KEEP_RECENT_K)

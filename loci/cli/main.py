@@ -1,11 +1,22 @@
 import os
 import sys
-from loci.engine import MemoryEngine
+
 from loci.colors import (
-    banner, separator, log_system, log_ok, log_warn, log_error,
-    c, BRIGHT_WHITE, BRIGHT_CYAN, BRIGHT_YELLOW, BRIGHT_GREEN,
-    BRIGHT_MAGENTA, DIM, BOLD, GREEN, YELLOW, CYAN, MAGENTA
+    BOLD,
+    BRIGHT_CYAN,
+    BRIGHT_GREEN,
+    BRIGHT_MAGENTA,
+    BRIGHT_WHITE,
+    BRIGHT_YELLOW,
+    DIM,
+    banner,
+    c,
+    log_error,
+    log_ok,
+    log_warn,
+    separator,
 )
+from loci.engine import MemoryEngine
 
 HELP_TEXT = f"""
 {c('Доступные команды:', BOLD + BRIGHT_WHITE)}
@@ -104,7 +115,7 @@ def run_cli():
     try:
         engine = MemoryEngine()
         log_ok("Система инициализирована.")
-    except EnvironmentError as e:
+    except OSError as e:
         log_error(str(e))
         sys.exit(1)
     except Exception as e:

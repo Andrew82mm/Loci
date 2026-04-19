@@ -1,7 +1,9 @@
-import requests
 import json
-from loci.config import OPENROUTER_BASE_URL, get_openrouter_key
+
+import requests
+
 from loci.colors import log_llm
+from loci.config import OPENROUTER_BASE_URL, get_openrouter_key
 
 _FREE_FALLBACK = "meta-llama/llama-3-8b-instruct:free"
 

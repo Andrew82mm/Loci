@@ -1,6 +1,4 @@
 import os
-import pytest
-from loci.storage.filesystem import StorageManager
 
 
 def test_snapshot_create_and_list(tmp_memory_dir):

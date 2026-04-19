@@ -1,10 +1,12 @@
-import os
 import json
+import os
 import shutil
 from datetime import datetime
+
 import yaml
+
+from loci.colors import log_snapshot, log_system, log_warn
 from loci.config import MEMORY_DIR
-from loci.colors import log_system, log_snapshot, log_warn
 
 
 class StorageManager:
@@ -49,7 +51,7 @@ class StorageManager:
         """Возвращает (metadata_dict, body_str)."""
         if not os.path.exists(filepath):
             return {}, ""
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             content = f.read()
         if content.startswith("---"):
             parts = content.split("---", 2)
@@ -62,7 +64,7 @@ class StorageManager:
         """Дописывает строки в файл только если их там ещё нет (дедупликация)."""
         _, existing = self.read_file(filepath)
         existing_set = set(existing.splitlines())
-        to_add = [l for l in new_lines if l.strip() and l.strip() not in existing_set]
+        to_add = [line for line in new_lines if line.strip() and line.strip() not in existing_set]
         if not to_add:
             return
         with open(filepath, "a", encoding="utf-8") as f:
@@ -80,7 +82,7 @@ class StorageManager:
 
     def _load_index(self) -> dict:
         if os.path.exists(self.paths["index_file"]):
-            with open(self.paths["index_file"], "r", encoding="utf-8") as f:
+            with open(self.paths["index_file"], encoding="utf-8") as f:
                 try:
                     return json.load(f)
                 except json.JSONDecodeError:

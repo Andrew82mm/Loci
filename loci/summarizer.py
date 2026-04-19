@@ -1,7 +1,7 @@
-from loci.models import CycleResult, Message
-from loci.llm.client import llm_client
+from loci.colors import log_ok, log_system, log_warn, separator
 from loci.config import MODEL_FAST
-from loci.colors import log_ok, log_warn, log_system, separator
+from loci.llm.client import llm_client
+from loci.models import CycleResult, Message
 
 
 class SummarizationError(Exception):

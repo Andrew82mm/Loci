@@ -1,7 +1,7 @@
-import pytest
 from unittest.mock import MagicMock, patch
-from loci.storage.filesystem import StorageManager
+
 import loci.engine as engine_mod
+from loci.storage.filesystem import StorageManager
 
 
 def _engine_patches(storage):

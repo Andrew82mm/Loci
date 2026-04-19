@@ -1,4 +1,5 @@
 import re
+
 from loci.config import CHUNK_MAX
 
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
@@ -56,7 +57,7 @@ def chunk_markdown(text: str, source: str = "") -> list[dict]:
         section_text = text[start:end].strip()
 
         # Update heading breadcrumb
-        heading_stack = [(l, t) for (l, t) in heading_stack if l < level]
+        heading_stack = [(lvl, t) for (lvl, t) in heading_stack if lvl < level]
         heading_stack.append((level, title))
         breadcrumb = [t for (_, t) in heading_stack]
 

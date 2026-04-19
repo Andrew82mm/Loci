@@ -1,9 +1,10 @@
 import os
 import re
-from loci.llm.client import llm_client
-from loci.config import MODEL_FAST
-from loci.storage.filesystem import StorageManager
+
 from loci.colors import log_knowledge, log_warn
+from loci.config import MODEL_FAST
+from loci.llm.client import llm_client
+from loci.storage.filesystem import StorageManager
 
 
 class KnowledgeGraph:
@@ -41,7 +42,7 @@ Output (only the list items, one per line):"""
         return response
 
     def _parse_and_update_files(self, markdown_list: str):
-        lines = [l.strip() for l in markdown_list.splitlines() if l.strip()]
+        lines = [line.strip() for line in markdown_list.splitlines() if line.strip()]
 
         entity_lines: dict[str, list[str]] = {}
 

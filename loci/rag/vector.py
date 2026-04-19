@@ -1,9 +1,10 @@
 import os
+
 import chromadb
 from chromadb.utils import embedding_functions
-from loci.config import EMBEDDING_MODEL
-from loci.colors import log_rag
 
+from loci.colors import log_rag
+from loci.config import EMBEDDING_MODEL
 
 _META_FILENAME = "embedding_model.txt"
 

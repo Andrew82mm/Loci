@@ -12,7 +12,7 @@ OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 def get_openrouter_key() -> str:
     key = os.environ.get("OPENROUTER_API_KEY", OPENROUTER_API_KEY)
     if not key:
-        raise EnvironmentError(
+        raise OSError(
             "[Config] OPENROUTER_API_KEY не задан. "
             "Создайте файл .env с OPENROUTER_API_KEY=<ваш ключ> или задайте переменную окружения."
         )

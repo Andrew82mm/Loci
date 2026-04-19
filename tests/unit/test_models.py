@@ -1,5 +1,6 @@
 from datetime import datetime
-from loci.models import Message, Fact, RetrievedChunk, Snapshot, CycleResult
+
+from loci.models import CycleResult, Fact, Message, RetrievedChunk, Snapshot
 
 
 def test_message_defaults():

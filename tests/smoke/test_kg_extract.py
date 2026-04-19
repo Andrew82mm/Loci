@@ -1,4 +1,3 @@
-import pytest
 from loci.graph.extractor import KnowledgeGraph
 
 

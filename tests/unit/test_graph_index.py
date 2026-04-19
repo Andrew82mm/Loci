@@ -1,7 +1,9 @@
+from datetime import datetime
+
 import pytest
+
 from loci.graph.index import GraphIndex
 from loci.models import Fact
-from datetime import datetime
 
 
 @pytest.fixture

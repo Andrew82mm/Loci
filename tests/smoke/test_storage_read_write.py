@@ -1,5 +1,3 @@
-import pytest
-from loci.storage.filesystem import StorageManager
 
 
 def test_write_read_roundtrip_with_metadata(tmp_memory_dir):

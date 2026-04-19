@@ -1,12 +1,11 @@
-import os
 import json
-import math
-from loci.rag.vector import VectorStore
-from loci.rag.chunker import chunk_markdown
-from loci.storage.filesystem import StorageManager
-from loci.models import RetrievedChunk
-from loci.config import MIN_SIMILARITY
+import os
+
 from loci.colors import log_rag, log_warn
+from loci.config import MIN_SIMILARITY
+from loci.rag.chunker import chunk_markdown
+from loci.rag.vector import VectorStore
+from loci.storage.filesystem import StorageManager
 
 
 def _distance_to_score(distance: float) -> float:
@@ -53,7 +52,7 @@ class RAGEngine:
     def index_file(self, filepath: str) -> None:
         if not os.path.exists(filepath):
             return
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             content = f.read().strip()
         if not content:
             return

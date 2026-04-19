@@ -1,5 +1,7 @@
-import pytest
 from datetime import datetime
+
+import pytest
+
 from loci.models import Message
 from loci.summarizer import SummarizationPipeline
 
@@ -10,7 +12,6 @@ def _msg(role: str, content: str) -> Message:
 
 class FakeStorage:
     def __init__(self, tmp_path):
-        import os, json
         self.base_path = str(tmp_path)
         system = tmp_path / "_system"
         system.mkdir(parents=True, exist_ok=True)

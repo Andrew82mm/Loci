@@ -3,8 +3,8 @@ import re
 import sqlite3
 from datetime import datetime
 from typing import Literal
-from loci.models import Fact
 
+from loci.models import Fact
 
 _CREATE_SQL = """
 CREATE TABLE IF NOT EXISTS relations (
@@ -109,7 +109,7 @@ class GraphIndex:
         """Return entity names linked from the given file path via regex (legacy compat)."""
         if not os.path.exists(filepath):
             return []
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             content = f.read()
         return list(set(re.findall(r"\[\[(.*?)\]\]", content)))
 

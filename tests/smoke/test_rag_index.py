@@ -1,8 +1,8 @@
 import json
 import os
-import pytest
-from loci.storage.filesystem import StorageManager
+
 from loci.rag.retriever import RAGEngine
+from loci.storage.filesystem import StorageManager
 
 
 def _reset_mtime_index(storage: StorageManager) -> None:
