@@ -10,4 +10,5 @@ __pycache__/
 htmlcov/
 *.egg-info/
 dist/
+IMPROVEMENT_PLAN.md
 
