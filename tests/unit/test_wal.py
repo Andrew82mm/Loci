@@ -43,7 +43,7 @@ def test_recovery_removes_from_index_when_file_exists(tmp_path):
     w1._append({"id": "crash_001", "op": "write", "path": str(existing_file), "status": "pending"})
 
     # Recovery runs in __init__
-    w2 = WriteAheadLog(wal_path, removed.append)
+    WriteAheadLog(wal_path, removed.append)
     assert str(existing_file) in removed
 
 

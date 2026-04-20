@@ -2,7 +2,7 @@ import math
 import os
 import sqlite3
 import unicodedata
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from loci.models import Entity
 
@@ -36,7 +36,7 @@ class EntityResolver:
     def __init__(
         self,
         db_path: str,
-        embed_fn: Optional[Callable[[str], list[float]]] = None,
+        embed_fn: Callable[[str], list[float]] | None = None,
     ) -> None:
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         self.db_path = db_path

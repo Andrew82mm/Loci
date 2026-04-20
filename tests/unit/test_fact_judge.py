@@ -1,4 +1,3 @@
-import pytest
 
 from loci.graph.judge import FactJudge
 from loci.models import Fact
@@ -59,6 +58,7 @@ def test_judge_error_response_keeps_fact(mock_llm):
 def test_enable_fact_validation_flag(tmp_memory_dir, mock_llm, monkeypatch):
     """When ENABLE_FACT_VALIDATION=True, judge is invoked from extractor."""
     import json
+
     from loci.graph.extractor import KnowledgeGraph
 
     monkeypatch.setattr("loci.graph.extractor.ENABLE_FACT_VALIDATION", True)
@@ -81,6 +81,7 @@ def test_enable_fact_validation_flag(tmp_memory_dir, mock_llm, monkeypatch):
 def test_disable_fact_validation_skips_judge(tmp_memory_dir, mock_llm, monkeypatch):
     """When ENABLE_FACT_VALIDATION=False, judge is not called."""
     import json
+
     from loci.graph.extractor import KnowledgeGraph
 
     monkeypatch.setattr("loci.graph.extractor.ENABLE_FACT_VALIDATION", False)

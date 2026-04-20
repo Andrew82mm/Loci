@@ -2,7 +2,6 @@ import os
 import shutil
 import subprocess
 import tarfile
-import tempfile
 from typing import Any
 
 from loci.colors import log_snapshot, log_warn

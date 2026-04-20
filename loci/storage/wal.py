@@ -1,8 +1,8 @@
 import json
 import os
 import shutil
+from collections.abc import Callable
 from datetime import datetime
-from typing import Callable
 
 from loci.colors import log_warn
 
