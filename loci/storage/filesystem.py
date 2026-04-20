@@ -7,6 +7,7 @@ import yaml
 
 from loci.colors import log_snapshot, log_system, log_warn
 from loci.config import MEMORY_DIR
+from loci.storage.wal import WriteAheadLog
 
 
 class StorageManager:
@@ -25,6 +26,10 @@ class StorageManager:
             "history_file": os.path.join(base_path, "_system", "conversation_buffer.json"),
             "index_file":   os.path.join(base_path, "_system", "file_index.json"),
         }
+        # WAL must be initialised before _init_dirs (which calls write_file)
+        os.makedirs(self.paths["system"], exist_ok=True)
+        wal_path = os.path.join(self.paths["system"], "wal.jsonl")
+        self._wal = WriteAheadLog(wal_path, self._remove_from_index)
         self._init_dirs()
 
     def _init_dirs(self):
@@ -38,6 +43,7 @@ class StorageManager:
     # ── Файловые операции ──────────────────────────────────────────────────
 
     def write_file(self, filepath, content, metadata=None):
+        entry_id = self._wal.begin("write", filepath)
         full_content = ""
         if metadata:
             full_content = "---\n" + yaml.dump(metadata, allow_unicode=True) + "---\n"
@@ -46,6 +52,7 @@ class StorageManager:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(full_content)
         self._update_index(filepath)
+        self._wal.commit(entry_id)
 
     def read_file(self, filepath):
         """Возвращает (metadata_dict, body_str)."""
@@ -79,6 +86,15 @@ class StorageManager:
         index[os.path.abspath(filepath)] = os.path.getmtime(filepath)
         with open(self.paths["index_file"], "w", encoding="utf-8") as f:
             json.dump(index, f)
+
+    def _remove_from_index(self, filepath: str) -> None:
+        """Remove a path from mtime index so RAGEngine will re-sync it."""
+        index = self._load_index()
+        abs_path = os.path.abspath(filepath)
+        if abs_path in index:
+            del index[abs_path]
+            with open(self.paths["index_file"], "w", encoding="utf-8") as f:
+                json.dump(index, f)
 
     def _load_index(self) -> dict:
         if os.path.exists(self.paths["index_file"]):

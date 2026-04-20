@@ -38,3 +38,5 @@ CHUNK_MAX                 = int(os.environ.get("CHUNK_MAX", "2000"))
 EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "paraphrase-multilingual-MiniLM-L12-v2")
 
 MEMORY_DIR = os.environ.get("MEMORY_DIR", "project_memory")
+
+ENABLE_FACT_VALIDATION = os.environ.get("ENABLE_FACT_VALIDATION", "false").lower() == "true"

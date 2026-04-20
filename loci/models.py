@@ -24,6 +24,7 @@ class Fact(BaseModel):
     source_chunk: str
     extracted_at: datetime = Field(default_factory=datetime.now)
     confidence: float = 1.0
+    contested: bool = False
 
 
 class RetrievedChunk(BaseModel):

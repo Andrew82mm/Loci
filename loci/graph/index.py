@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS relations (
     source_file TEXT NOT NULL,
     confidence REAL DEFAULT 1.0,
     extracted_at TEXT NOT NULL,
+    contested BOOLEAN DEFAULT 0,
     UNIQUE(subject, predicate, object)
 );
 CREATE INDEX IF NOT EXISTS idx_subject ON relations(subject);
@@ -28,14 +29,43 @@ class GraphIndex:
         self.db_path = db_path
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.executescript(_CREATE_SQL)
+        self._migrate()
         self._conn.commit()
 
+    def _migrate(self) -> None:
+        """Add columns introduced after initial schema (idempotent)."""
+        cur = self._conn.execute("PRAGMA table_info(relations)")
+        existing = {row[1] for row in cur.fetchall()}
+        if "contested" not in existing:
+            self._conn.execute(
+                "ALTER TABLE relations ADD COLUMN contested BOOLEAN DEFAULT 0"
+            )
+
     def add(self, fact: Fact) -> None:
+        # Detect conflicts: same (subject, predicate) but different object
+        cur = self._conn.execute(
+            """
+            SELECT id FROM relations
+            WHERE subject = ? AND predicate = ?
+              AND (object IS NOT ? OR (object IS NULL AND ? IS NOT NULL)
+                                   OR (object IS NOT NULL AND ? IS NULL))
+            """,
+            (
+                fact.subject,
+                fact.predicate,
+                fact.object,
+                fact.object,
+                fact.object,
+            ),
+        )
+        conflicting_ids = [row[0] for row in cur.fetchall()]
+        is_contested = len(conflicting_ids) > 0
+
         self._conn.execute(
             """
             INSERT OR REPLACE INTO relations
-                (subject, predicate, object, source_file, confidence, extracted_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (subject, predicate, object, source_file, confidence, extracted_at, contested)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 fact.subject,
@@ -44,8 +74,14 @@ class GraphIndex:
                 "",
                 fact.confidence,
                 fact.extracted_at.isoformat(),
+                is_contested,
             ),
         )
+        if conflicting_ids:
+            self._conn.executemany(
+                "UPDATE relations SET contested = 1 WHERE id = ?",
+                [(cid,) for cid in conflicting_ids],
+            )
         self._conn.commit()
 
     def neighbors(
@@ -85,7 +121,8 @@ class GraphIndex:
             params.append(obj)
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
         cur = self._conn.execute(
-            f"SELECT subject, predicate, object, source_file, confidence, extracted_at FROM relations {where}",
+            f"SELECT subject, predicate, object, source_file, confidence, extracted_at, contested"
+            f" FROM relations {where}",
             params,
         )
         facts = []
@@ -99,6 +136,7 @@ class GraphIndex:
                     source_chunk=row[3],
                     extracted_at=datetime.fromisoformat(row[5]),
                     confidence=row[4],
+                    contested=bool(row[6]) if row[6] is not None else False,
                 )
             )
         return facts
